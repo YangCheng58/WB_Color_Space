@@ -1,6 +1,6 @@
 Perception-Inspired Color Space Design for Photo White Balance Correction
 
-[WACV 2025 Accepted] Official PyTorch Implementation.
+[WACV 2026 Accepted] Official PyTorch Implementation.
 
 📖 Introduction
 
