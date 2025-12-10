@@ -40,7 +40,7 @@ The overall pipeline utilizes the **MambaVision Module (MVM)** and **Cross Atten
 * **PyTorch**: 2.0+
 
 ```bash
-git clone [https://github.com/YangCheng58/WB_Color_Space.git](https://github.com/YangCheng58/WB_Color_Space.git)
+git clone https://github.com/YangCheng58/WB_Color_Space.git
 ```
 
 ```bash
