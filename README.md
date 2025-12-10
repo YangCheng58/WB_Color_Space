@@ -1,16 +1,19 @@
-Perception-Inspired Color Space Design for Photo White Balance Correction
+Perception-Inspired Color Space Design for Photo White Balance Editing
 
 [WACV 2026 Accepted] Official PyTorch Implementation.
 
 📖 Introduction
 
-Abstract: White Balance (WB) is a critical component of the Image Signal Processor (ISP) pipeline, designed to mitigate color casts introduced by diverse illumination conditions and restore the scene's true colors. Currently, sRGB-based methods are widely adopted for post-ISP WB editing where the original raw data is unavailable. However, this task is ill-posed due to the non-linearity introduced by the ISP and the entanglement of color channels in the sRGB domain.
+Abstract: White balance (WB) is a key step in the image signal processor (ISP) pipeline that mitigates color casts caused by varying illumination and restores the scene’s true colors. Currently, sRGB-based WB editing for post-ISP WB correction is widely used to address color constancy failures in the ISP pipeline when the original camera RAW is unavailable. However, additive color models (e.g., sRGB) are inherently limited by fixed nonlinear transformations and entangled color channels, which often impede their generalization to complex lighting conditions.
 
-To address these challenges, we propose a novel framework leveraging a Learnable HSI (LHSI) color space. By disentangling luminance from chromatic components via our proposed DCLAN (Deep Color-Space-Aware Network), which integrates MambaVision blocks for efficient long-range dependency modeling, the LHSI representation facilitates more effective modeling of illumination changes.
+To address these challenges, we propose a novel framework for WB correction that leverages a perception-inspired Learnable HSI (LHSI) color space. Built upon a cylindrical color model that naturally separates luminance from chromatic components, our framework further introduces dedicated parameters to enhance this disentanglement and learnable mapping to adaptively refine the flexibility. Moreover, a new Mamba-based network is introduced, which is tailored to the characteristics of the proposed LHSI color space. 
 
-Figure 1: Overview of the Learnable HSI (LHSI) color space.
+Experimental results on benchmark datasets demonstrate the superiority of our method, highlighting the potential of perception-inspired color space design in computational photography.
 
-Figure 2: Overview of our DCLAN architecture.
+![Overview of the Learnable HSI (LHSI) color space.](pics/colorspace.png)
+
+![Overview of our DCLAN architecture.](pics/.png)
+
 
 🛠️ Environment Requirements
 
