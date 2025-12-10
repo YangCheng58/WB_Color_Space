@@ -1,57 +1,78 @@
-Perception-Inspired Color Space Design for Photo White Balance Editing
+# Perception-Inspired Color Space Design for Photo White Balance Editing
 
-[WACV 2026 Accepted] Official PyTorch Implementation.
-
-📖 Introduction
-
-Abstract: White balance (WB) is a key step in the image signal processor (ISP) pipeline that mitigates color casts caused by varying illumination and restores the scene’s true colors. Currently, sRGB-based WB editing for post-ISP WB correction is widely used to address color constancy failures in the ISP pipeline when the original camera RAW is unavailable. However, additive color models (e.g., sRGB) are inherently limited by fixed nonlinear transformations and entangled color channels, which often impede their generalization to complex lighting conditions.
-
-To address these challenges, we propose a novel framework for WB correction that leverages a perception-inspired Learnable HSI (LHSI) color space. Built upon a cylindrical color model that naturally separates luminance from chromatic components, our framework further introduces dedicated parameters to enhance this disentanglement and learnable mapping to adaptively refine the flexibility. Moreover, a new Mamba-based network is introduced, which is tailored to the characteristics of the proposed LHSI color space. 
-
-Experimental results on benchmark datasets demonstrate the superiority of our method, highlighting the potential of perception-inspired color space design in computational photography.
-
-![Overview of the Learnable HSI (LHSI) color space.](pics/colorspace.png)
-
-![Overview of our DCLAN architecture.](pics/.png)
+> **Official PyTorch Implementation** of our WACV 2026 paper.
 
 
-🛠️ Environment Requirements
+### 🚀 Framework Overview
 
-This project relies on torch, timm, and mamba_ssm. Please ensure you have a GPU environment set up.
+#### 1. The Learnable HSI (LHSI) Color Space
+Our proposed color space introduces a learnable luminance axis and adaptive nonlinear mapping functions.
 
-Recommended: Linux, CUDA 11.8+, Python 3.8+
+<div align="center">
+  <img src="pics/colorspace.png" width="800"/>
+</div>
 
-📂 Dataset Preparation
+#### 2. DCLAN Architecture
+The overall pipeline utilizes the **MambaVision Module (MVM)** and **Cross Attention Module (CAM)** to effectively process the disentangled features.
 
-We use the dataset from "Correcting Improperly White-Balanced Images" (CVPR 2019).
-Please download the dataset from the official repository.
+<div align="center">
+  <img src="pics/overallnetwork.png" width="100%"/>
+</div>
 
-Directory Structure
+## ⚡ Get Started
 
-Please organize the downloaded dataset as follows:
 
+* **System**: Linux (Recommended for Mamba compilation)
+* **Python**: 3.10 (Recommended)
+* **CUDA**: 11.8 (Required for Mamba-SSM)
+* **PyTorch**: 2.0+
+
+```bash
+git clone [https://github.com/YangCheng58/WB_Color_Space.git](https://github.com/YangCheng58/WB_Color_Space.git)
+```
+
+```bash
+cd WB_Color_Space
+```
+
+```bash
+pip install -r requirements.txt
+```
+
+## 📂 Dataset Preparation
+
+We evaluate our method using the **Rendered WB Dataset** introduced by Afifi et al. in [Correcting Improperly White-Balanced Images (CVPR 2019)](https://github.com/mahmoudnafifi/WB_sRGB).
+
+Following the data organization and evaluation protocol described in [Deep White-Balance Editing (CVPR 2020)](https://openaccess.thecvf.com/content_CVPR_2020/papers/Afifi_Deep_White-Balance_Editing_CVPR_2020_paper.pdf), please download the dataset and organize the files as follows.
+
+### 1. Download Dataset
+Please download the full dataset (Set1, Set2, and Cube+) from the **[Official Dataset Repository](https://github.com/mahmoudnafifi/WB_sRGB)**.
+
+### 2. Directory Structure
+Extract and organize the data into the `./dataset/` directory:
+
+```text
 ./dataset/
-├── Set1_all/                # Contains Set1 images and GTs
-├── Set2_input_images/       # Set2 Inputs
-├── Set2_ground_truth_images/# Set2 GTs
-├── Cube_input_images/       # Cube+ Inputs
-├── Cube_ground_truth_images/# Cube+ GTs
+├── Set1_all/                  # Contains Inputs and GTs from Set1
+├── Set2_input_images/         # Testing inputs from Set2
+├── Set2_ground_truth_images/  # Testing GTs from Set2
+├── Cube_input_images/         # Testing inputs from Cube+
+└── Cube_ground_truth_images/  # Testing GTs from Cube+
+
+**Note**: We follow the standard cross-validation protocol. Specifically, we use Fold 3 as the testing set. The detailed image list and split definition can be found in folds/fold3_.mat.
 
 
+## 🚀 Training
 
-Note: The folds/*.mat files define the train/test split for Set1, which are typically provided with the original dataset or can be found in our folds/ directory.
+To train the DCLAN model from scratch on Set1 using the standard Fold 3 configuration, run the following command:
 
-🚀 Training
-
-To train the DCLAN model from scratch on Set1.
-
+```bash
 python train.py \
   --training_dir ./dataset/Set1_all \
-  --fold 0 \
-  --epochs 300 \
-  --batch-size 32 \
-  --learning-rate 0.0001 \
-  --patches-per-image 4 
+  --fold 3 \
+  --epochs 120 \
+  --num_training_images 12000
+```
   
 📊 Evaluation
 
