@@ -13,6 +13,7 @@ from skimage import color
 from sklearn.linear_model import LinearRegression
 from torchvision import transforms
 from arch.DCLAN import DCLAN
+import argparse
 
 def outOfGamutClipping(I):
     I[I > 1] = 1
@@ -211,7 +212,6 @@ def worker(args):
             
         # Calculate Metrics
         mse, mae, de = calc_metrics(pred_np, gt_np)
-        print(mse)
         return {'file': basename(inp_path), 'mse': mse, 'mae': mae, 'de': de}
     except Exception as e:
         return {'error': str(e)}
@@ -219,73 +219,91 @@ def worker(args):
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
-    device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+    
+    parser = argparse.ArgumentParser(description="Evaluation Script for DCLAN")
+    # Core arguments
+    parser.add_argument('--dataset', type=str, required=True, choices=['Set1', 'Set2', 'Cube'], help='Dataset to evaluate')
+    parser.add_argument('--model_path', type=str, required=True, help='Path to .pth model weights')
+    parser.add_argument('--device', type=str, default='cuda:1', help='Device (e.g., cuda:0 or cpu)')
+    
+    # Set1 specific arguments
+    parser.add_argument('--data_root', type=str, default='./dataset/Set1_all', help='Root for Set1 images')
+    parser.add_argument('--split_file', type=str, default='./folds/fold3_.mat', help='Path to fold mat file')
+    
+    # Set2/Cube specific arguments
+    parser.add_argument('--input_dir', type=str, help='Input directory for Set2/Cube')
+    parser.add_argument('--gt_dir', type=str, help='GT directory for Set2/Cube')
+    
+    args = parser.parse_args()
+    
+    device = torch.device(args.device if torch.cuda.is_available() else 'cpu')
 
     # -------------------------------------------------------------
-    # 🎛️ Dataset Configuration Center
+    # 🎛️ Dataset Configuration
     # -------------------------------------------------------------
-    # TODO: Please update the paths below before running!
-    DATASETS = {
-        'Set1': {
+    config = {}
+    if args.dataset == 'Set1':
+        config = {
             'type': 'mat_file',
-            'img_root': '/path/to/Set1_all',  # Updated to generic path
-            'gt_root':  '/path/to/Set1_all',  # Set1 Input and GT are usually in the same directory
-            'mat_file': './folds/fold3_.mat'  # Updated to relative path
-        },
-        'Set2': {
+            'img_root': args.data_root,
+            'gt_root': args.data_root,
+            'mat_file': args.split_file
+        }
+    elif args.dataset == 'Set2':
+        config = {
             'type': 'folder',
-            'input_dir': '/path/to/Set2_input_images',        # Updated to generic path
-            'gt_dir':    '/path/to/Set2_ground_truth_images', # Updated to generic path
+            'input_dir': args.input_dir,
+            'gt_dir': args.gt_dir,
             'match_style': 'direct'
-        },
-        'Cube': {
+        }
+    elif args.dataset == 'Cube':
+        config = {
             'type': 'folder',
-            'input_dir': '/path/to/Cube_input_images',        # Updated to generic path
-            'gt_dir':    '/path/to/Cube_ground_truth_images', # Updated to generic path
+            'input_dir': args.input_dir,
+            'gt_dir': args.gt_dir,
             'match_style': 'cube'
         }
-    }
 
     # -------------------------------------------------------------
-    # 🚀 Execution Console (Modify here to switch)
+    # 🚀 Model Loading & Execution
     # -------------------------------------------------------------
-    CURRENT_TASK = 'Set1'      # <--- Switch: 'Set1', 'Set2', 'Cube'
-    MODEL_ARCH   = 'DCLAN'    
-    MODEL_PATH   = '.models/best.pth' # Updated to relative path
-    # -------------------------------------------------------------
+    logging.info(f"=== Task Started: {args.dataset} | Model: {basename(args.model_path)} ===")
 
-    logging.info(f"=== Task Started: {CURRENT_TASK} | Model: {MODEL_ARCH} ===")
-
-    
     net = DCLAN()
-        
-    if exists(MODEL_PATH):
-        state = torch.load(MODEL_PATH, map_location=device)
+    
+    if exists(args.model_path):
+        state = torch.load(args.model_path, map_location=device)
+        # Handle potential 'module.' prefix
+        if 'state_dict' in state: state = state['state_dict']
         if list(state.keys())[0].startswith('module.'):
             state = {k.replace('module.', ''): v for k, v in state.items()}
         net.load_state_dict(state)
         net.to(device)
         net.eval()
-        logging.info("Model weights loaded")
+        logging.info("Model weights loaded successfully")
     else:
-        logging.error(f"Weight file not found: {MODEL_PATH}")
+        logging.error(f"Weight file not found: {args.model_path}")
         exit()
 
-    # 2. Match data
-    cfg = DATASETS[CURRENT_TASK]
-    pairs = get_image_pairs(cfg)
-    logging.info(f"Successfully matched image pairs: {len(pairs)} pairs")
+    # 2. Match Data
+    pairs = get_image_pairs(config)
+    
+    if not pairs:
+        logging.error("No matching image pairs found. Please check the path arguments!")
+        exit()
+        
+    logging.info(f"Successfully matched image pairs: {len(pairs)}")
 
-    # 3. Execute evaluation
+    # 3. Execute Evaluation
     results = []
-    if pairs:
-        task_args = [(p[0], p[1], net, device) for p in pairs]
-        with ThreadPoolExecutor(max_workers=4) as executor:
-            for res in tqdm(executor.map(worker, task_args), total=len(pairs), desc="Inferencing"):
-                if 'error' not in res:
-                    results.append(res)
-                else:
-                    logging.error(f"Skipped: {res['error']}")
+    task_args = [(p[0], p[1], net, device) for p in pairs]
+    
+    with ThreadPoolExecutor(max_workers=4) as executor:
+        for res in tqdm(executor.map(worker, task_args), total=len(pairs), desc="Inferencing"):
+            if 'error' not in res:
+                results.append(res)
+            else:
+                logging.error(f"Skipped: {res['error']}")
 
     # 4. Statistical Results
     if results:
@@ -293,32 +311,27 @@ if __name__ == "__main__":
         maes = [r['mae'] for r in results]
         des  = [r['de']  for r in results]
 
-        # ------------------- Added: Quantile calculation -------------------
         # calculate Q1, Median, Q3
         mse_q = np.percentile(mses, [25, 50, 75])
         mae_q = np.percentile(maes, [25, 50, 75])
         de_q  = np.percentile(des,  [25, 50, 75])
 
         print("\n" + "="*65)
-        print(f"📊 Dataset: {CURRENT_TASK} (Total: {len(results)})")
+        print(f"📊 Dataset: {args.dataset} (Total: {len(results)})")
         print("-" * 65)
-        # Header alignment
         print(f"{'Metric':<7} | {'Mean':<8} | {'Q1 (25%)':<8} | {'Med (50%)':<8} | {'Q3 (75%)':<8}")
         print("-" * 65)
         
-        # Print row by row, keeping 4 decimal places
         print(f" {'MSE':<6} | {np.mean(mses):<8.4f} | {mse_q[0]:<8.4f} | {mse_q[1]:<8.4f} | {mse_q[2]:<8.4f}")
         print(f" {'MAE':<6} | {np.mean(maes):<8.4f} | {mae_q[0]:<8.4f} | {mae_q[1]:<8.4f} | {mae_q[2]:<8.4f}")
         print(f" {'dE00':<6} | {np.mean(des):<8.4f} | {de_q[0]:<8.4f} | {de_q[1]:<8.4f} | {de_q[2]:<8.4f}")
-        
         print("="*65 + "\n")
-        # --------------------------------------------------------
 
-        # Record outliers (MSE > 500)
+        # Record outliers
         outliers = [r for r in results if r['mse'] > 500]
         if outliers:
-            outfile = f"outliers_{CURRENT_TASK}.txt"
+            outfile = f"outliers_{args.dataset}.txt"
             with open(outfile, "w") as f:
                 for o in outliers:
                     f.write(f"{o['file']} | MSE:{o['mse']:.2f}\n")
-            logging.info(f"Saved {len(outliers)} outliers with MSE>500 to {outfile}")
+            logging.info(f"Saved {len(outliers)} outliers to {outfile}")

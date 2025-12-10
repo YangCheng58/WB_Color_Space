@@ -1,0 +1,15 @@
+numpy
+torch>=2.0.0
+torchvision
+timm
+mamba_ssm
+causal-conv1d>=1.0.0
+opencv-python
+Pillow
+scipy
+scikit-image
+scikit-learn
+tqdm
+einops
+huggingface_hub
+argparse

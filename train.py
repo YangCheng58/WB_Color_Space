@@ -1,12 +1,3 @@
-"""
- Training
- Copyright (c) 2019 Samsung Electronics Co., Ltd. All Rights Reserved
- If you use this code, please cite the following paper:
- Mahmoud Afifi and Michael S Brown. Deep White-Balance Editing. In CVPR, 2020.
-"""
-__author__ = "Mahmoud Afifi"
-__credits__ = ["Mahmoud Afifi"]
-
 import argparse
 import logging
 import os
@@ -18,27 +9,27 @@ from torch import optim
 from tqdm import tqdm
 import torch.optim as optim
 from torch.optim.lr_scheduler import MultiStepLR
-from utilities.dataset import TrainDataset,ValDataset
+from utilities.dataset import BasicDataset
 from torch.utils.data import DataLoader
 from utilities.loss_func import mae_loss
 from arch.DCLAN import DCLAN
-    
+
 def train_net(net,
               device,
-              epochs=110,
+              epochs=120,          # [修改] 默认改为 120
               batch_size=128,
               lr=0.0001,
               lrdf=0.5,
-              fold=0,
-              trimages=12000,
+              fold=3,              
+              trimages=12000,      
               patchsz=256,
               patchnum=4,
-              dir_img='/workspace/users/cy/renderWB/Set1_all'):
-    dir_checkpoint = f'/workspace/users/cy/checkpoints_{fold}_lhsi/'
-    train = TrainDataset(dir_img, fold=fold, patch_size=patchsz, patch_num_per_image=patchnum, max_trdata=trimages)
-    val=ValDataset()
+              dir_img='./dataset/Set1_all'):
+    
+    dir_checkpoint = f'./checkpoints_{fold}_lhsi/'
+    
+    train = BasicDataset(dir_img, fold=fold, patch_size=patchsz, patch_num_per_image=patchnum, max_trdata=trimages)
     train_loader = DataLoader(train, batch_size=batch_size, shuffle=True, num_workers=16, pin_memory=True)
-    val_loader = DataLoader(val, batch_size=batch_size, shuffle=False, num_workers=16, pin_memory=True, drop_last=True)
 
     optimizer = optim.Adam(net.parameters(), 
                       lr=lr, 
@@ -46,16 +37,14 @@ def train_net(net,
                       betas=(0.9, 0.99))
 
     scheduler = MultiStepLR(optimizer, 
-                        milestones=[40, 80, 120, 160, 200,240,260,270,280,290], 
+                        milestones=[40, 80, 120, 160, 200, 240, 260, 270, 280, 290], 
                         gamma=lrdf)
 
     for epoch in range(epochs):
         net.train()
-        epoch_loss = []
 
         with tqdm(total=len(train), desc=f'Epoch {epoch + 1}/{epochs}', unit='img') as pbar:
             loss_all = 0
-            test_loss_all=0
             for batch in train_loader:
                 imgs_ = batch['image']
                 awb_gt_ = batch['gt-AWB']
@@ -69,15 +58,15 @@ def train_net(net,
 
                     optimizer.zero_grad()
 
-                    img_rgb,normal= net(imgs)
+                    img_rgb, normal = net(imgs)
                     img_rgb = img_rgb.clamp(min=0, max=1)
-                    awb_hsv=net.rgb2hsv(awb_gt)
-                    img_hsv=net.rgb2hsv(img_rgb)
+                    awb_hsv = net.rgb2hsv(awb_gt)
+                    img_hsv = net.rgb2hsv(img_rgb)
                     img_rgb = img_rgb.clamp(min=0, max=1)
 
-                    loss_rgb=mae_loss.compute(img_rgb,awb_gt)  
-                    loss_hvi=mae_loss.compute(img_hsv,awb_hsv)
-                    total_loss = 0.9*loss_rgb + 0.1*loss_hvi
+                    loss_rgb = mae_loss.compute(img_rgb, awb_gt)  
+                    loss_hvi = mae_loss.compute(img_hsv, awb_hsv)
+                    total_loss = 0.9 * loss_rgb + 0.1 * loss_hvi
             
                     total_loss = total_loss.float()
                     total_loss.backward()
@@ -85,18 +74,15 @@ def train_net(net,
                     optimizer.step()
 
                     loss_all += total_loss.item()
-                    test_loss_all+=mae_loss.compute(img_rgb,awb_gt).item()
+                   
         
                     pbar.set_postfix(**{'loss (batch)': total_loss.item()})
                     pbar.update(np.ceil(imgs.shape[0] / patchnum))
 
         scheduler.step()
         loss_all /= len(train_loader) * imgs.shape[0]
-        epoch_loss.append(loss_all)
-        test_loss_all/=len(train_loader)*imgs.shape[0]
         print(normal)
         print(loss_all)
-        print(test_loss_all)
 
         if not os.path.exists(dir_checkpoint):
             os.mkdir(dir_checkpoint)
@@ -110,13 +96,13 @@ def train_net(net,
         logging.info('Created trained models directory')
 
     torch.save(net.state_dict(), 'models/' + 'netlhsi.pth')
-    print(epoch_loss)
     logging.info('End of training')
 
 
 def get_args():
     parser = argparse.ArgumentParser(description='Train deep WB editing network.')
-    parser.add_argument('-e', '--epochs', metavar='E', type=int, default=110,
+    # [修改] 默认改为 120
+    parser.add_argument('-e', '--epochs', metavar='E', type=int, default=120, 
                         help='Number of epochs', dest='epochs')
     parser.add_argument('-b', '--batch-size', metavar='B', type=int, nargs='?', default=32,
                         help='Batch size', dest='batchsize')
@@ -128,21 +114,24 @@ def get_args():
                         help='Percent of the data that is used as validation (0-100)')
     parser.add_argument('-vf', '--validation-frequency', dest='val_frq', type=int, default=2,
                         help='Validation frequency.')
-    parser.add_argument('-d', '--fold', dest='fold', type=int, default=1,
-                        help='Testing fold to be excluded. Use --fold 0 to use all Set1 training data')
+    # [修改] 默认改为 3
+    parser.add_argument('-d', '--fold', dest='fold', type=int, default=3, 
+                        help='Testing fold to be excluded.')
     parser.add_argument('-p', '--patches-per-image', dest='patchnum', type=int, default=4,
                         help='Number of training patches per image')
     parser.add_argument('-s', '--patch-size', dest='patchsz', type=int, default=128,
                         help='Size of training patch')
-    parser.add_argument('-t', '--num_training_images', dest='trimages', type=int, default=13333,
-                        help='Number of training images. Use --num_training_images 0 to use all training images')
+    # [修改] 默认改为 12000
+    parser.add_argument('-t', '--num_training_images', dest='trimages', type=int, default=12000, 
+                        help='Number of training images.')
     parser.add_argument('-c', '--checkpoint-period', dest='chkpointperiod', type=int, default=5,
                         help='Number of epochs to save a checkpoint')
     parser.add_argument('-ldf', '--learning-rate-drop-factor', dest='lrdf', type=float, default=0.5,
                         help='Learning rate drop factor')
     parser.add_argument('-ldp', '--learning-rate-drop-period', dest='lrdp', type=int, default=25,
                         help='Learning rate drop period')
-    parser.add_argument('-trd', '--training_dir', dest='trdir', default='../dataset/',
+    # [修改] 默认改为 ./dataset/Set1_all
+    parser.add_argument('-trd', '--training_dir', dest='trdir', default='./dataset/Set1_all', 
                         help='Training image directory')
 
     return parser.parse_args()
