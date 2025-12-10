@@ -18,10 +18,9 @@ import logging
 import random
 from scipy.io import loadmat
 from torchvision import transforms
-import logging
-from PIL import Image, ImageOps, ImageEnhance # 1. 引入 ImageEnhance
+from PIL import Image, ImageOps, ImageEnhance 
 
-class TrainDataset(Dataset):
+class BasicDataset(Dataset):
     def __init__(self, imgs_dir, fold=0, patch_size=128, patch_num_per_image=1, max_trdata=12000):
         self.imgs_dir = imgs_dir
         self.patch_size = patch_size
@@ -30,11 +29,14 @@ class TrainDataset(Dataset):
         if fold != 0:
             tfolds = list(set([1, 2, 3]) - set([fold]))
             logging.info(f'Training process will use {max_trdata} training images randomly selected from folds {tfolds}')
-            files = loadmat(join('..', 'folds', 'fold%d_.mat' % fold))
+            
+            files = loadmat(join('folds', 'fold%d_.mat' % fold))
+            
             files = files['training']
             self.imgfiles = []
             logging.info('Loading training images information...')
             for i in range(len(files)):
+               
                 temp_files = glob(join(imgs_dir, files[i][0][0]))
                 for file in temp_files:
                     self.imgfiles.append(file)
@@ -56,7 +58,6 @@ class TrainDataset(Dataset):
 
     @staticmethod
     def randomCT(image):
-       
         random_factor = np.random.randint(0, 31) / 10. 
         enhancer = ImageEnhance.Color(image)
         color_image = enhancer.enhance(random_factor)
@@ -130,5 +131,3 @@ class TrainDataset(Dataset):
             awb_img_patches = np.append(awb_img_patches, temp_awb, axis=0)
 
         return {'image': torch.from_numpy(in_img_patches), 'gt-AWB': torch.from_numpy(awb_img_patches)}
-
-
