@@ -53,12 +53,12 @@ pip install -r requirements.txt
 
 ## 📂 Dataset Preparation
 
-We evaluate our method using the **Rendered WB Dataset** introduced by Afifi et al. in [this link](https://yorkucvil.github.io/projects/public_html/sRGB_WB_correction/dataset.html).
+We evaluate our method using the **Rendered WB Dataset** introduced by Afifi et al. .
 
 Following the data organization and evaluation protocol described in [Deep White-Balance Editing (CVPR 2020)](https://openaccess.thecvf.com/content_CVPR_2020/papers/Afifi_Deep_White-Balance_Editing_CVPR_2020_paper.pdf), please download the dataset and organize the files as follows.
 
 ### 1. Download Dataset
-Please download the full dataset (Set1, Set2, and Cube+) from the **[Official Dataset Repository](https://github.com/mahmoudnafifi/WB_sRGB)**.
+Please download the full dataset (Set1, Set2, and Cube+) from the **[Official Dataset Repository](https://yorkucvil.github.io/projects/public_html/sRGB_WB_correction/dataset.html)**.
 
 ### 2. Directory Structure
 Extract and organize the data into the `./dataset/` directory:
