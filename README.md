@@ -2,6 +2,18 @@
 
 > **Official PyTorch Implementation** of our WACV 2026 paper.
 
+**[Yang Cheng](https://github.com/YangCheng58/)**<sup>1</sup>, **[Ziteng Cui](https://cuiziteng.github.io/)**<sup>2, *</sup>, **[Lin Gu](https://sites.google.com/view/linguedu/home/)**<sup>3</sup>, **[Shenghan Su](https://github.com/ryeocthiv/)**<sup>1</sup>, **Zenghui Zhang**<sup>1</sup>
+
+<small>
+<sup>1</sup> Shanghai Jiao Tong University <br>
+<sup>2</sup> The University of Tokyo <br>
+<sup>3</sup> Tohoku University
+</small>
+
+<br>
+
+<small>* Corresponding author</small>
+
 
 ### 🚀 Framework Overview
 
@@ -58,6 +70,7 @@ Extract and organize the data into the `./dataset/` directory:
 ├── Set2_ground_truth_images/  # Testing GTs from Set2
 ├── Cube_input_images/         # Testing inputs from Cube+
 └── Cube_ground_truth_images/  # Testing GTs from Cube+
+```
 
 **Note**: We follow the standard cross-validation protocol. Specifically, we use Fold 3 as the testing set. The detailed image list and split definition can be found in folds/fold3_.mat.
 
@@ -74,9 +87,45 @@ python train.py \
   --num_training_images 12000
 ```
   
-📊 Evaluation
+## 📈 Evaluation
 
-We provide a comprehensive evaluation script eval.py to test on Set1, Set2, and Cube+ datasets.
+We provide a comprehensive evaluation script to test the model on **Set1**, **Set2**, and **Cube+** datasets. The script calculates **MSE**, **MAE**, and **$\Delta E_{00}$**, reporting both the Mean and Quartiles (Q1, Median, Q3).
 
-Change the datasets and settings in eval.py and run it
+### 1. Pre-trained Model
+The pre-trained model weights are already provided in this repository at:
+> `models/best.pth`
+
+### 2. Run Evaluation
+You can evaluate specific datasets using the following commands.
+
+**Evaluate on Set1:**
+```bash
+python eval.py \
+  --dataset Set1 \
+  --data_root ./dataset/Set1_all \
+  --split_file ./folds/fold3_.mat \
+  --model_path models/best.pth
+```
+
+**Evaluate on Set2:**
+```bash
+python eval.py \
+  --dataset Set2 \
+  --input_dir ./dataset/Set2_input_images \
+  --gt_dir ./dataset/Set2_ground_truth_images \
+  --model_path models/best.pth
+```
+
+**Evaluate on Cube+:**
+```bash
+python eval.py \
+  --dataset Cube \
+  --input_dir ./dataset/Cube_input_images \
+  --gt_dir ./dataset/Cube_ground_truth_images \
+  --model_path models/best.pth
+```
+
+### 3. Output Metrics
+The script will output a table containing Mean, Q1 (25%), Median (50%), and Q3 (75%) for all metrics. It also automatically saves any outliers (MSE > 500) to a text file for further analysis.
+
 
