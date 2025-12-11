@@ -89,7 +89,7 @@ python train.py \
   
 ## 📈 Evaluation
 
-We provide a comprehensive evaluation script to test the model on **Set1**, **Set2**, and **Cube+** datasets. The script calculates **MSE**, **MAE**, and **$\Delta E_{00}$**, reporting both the Mean and Quartiles (Q1, Median, Q3).
+We provide a comprehensive evaluation script to test the model on **Set1**, **Set2**, and **Cube+** datasets. The script calculates **MSE**, **MAE**, and **$\Delta E_{2000}$**, reporting both the Mean and Quartiles (Q1, Median, Q3).
 
 ### 1. Pre-trained Model
 The pre-trained model weights are already provided in this repository at:
